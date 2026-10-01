@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 
 # Bundle edge Rails instead: gem "rails", github: "rails/rails", branch: "main"
-gem "rails", "~> 8.0.0"
+gem "rails", "~> 8.1.4"
 # The original asset pipeline for Rails [https://github.com/rails/sprockets-rails]
 gem "sprockets-rails"
 # Use sqlite3 as the database for Active Record
@@ -71,11 +71,11 @@ end
 # user added
 gem "pg"
 gem "pg_search"
-gem "pagy", "~> 9.0"
+gem "pagy", "~> 9.4"
 gem "tailwindcss-rails", "~> 3.0"
 gem "neighbor"
 gem "informers"
-gem "tokenizers", "~> 0.6.1"
+gem "tokenizers", "~> 0.7.0"
 gem "pgvector"
 
-gem "solid_queue", "~> 1.4"
+gem "solid_queue", "~> 1.7"
