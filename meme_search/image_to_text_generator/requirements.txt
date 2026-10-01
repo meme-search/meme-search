@@ -2,7 +2,7 @@ fastapi[standard]
 uvicorn
 requests
 Pillow
-torch>=2.13.0
+torch>=2.14.0
 torchvision>=0.28.0
 transformers==4.57.6
 einops>=0.8.2
