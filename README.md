@@ -237,6 +237,8 @@ extra_hosts:
 
 The first auto generation of description of a meme takes longer than average, as image-to-text model weights are downloaded and cached. Subsequent generations are faster.
 
+The local generator keeps the loaded model in memory between descriptions and releases it after 5 idle minutes. Set `MODEL_IDLE_TIMEOUT` in `.env` to change that (seconds, `0` keeps the model loaded); see the [image to text generator README](meme_search/image_to_text_generator/README.md#model-memory).
+
 You can download additional models in the settings tab of the app.
 
 ### Description generation providers

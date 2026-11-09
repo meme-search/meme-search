@@ -174,6 +174,25 @@ class TestProcessJobs:
         mock_cursor.execute.assert_any_call("DELETE FROM jobs WHERE id = ?", (1,))
         mock_cursor.execute.assert_any_call("DELETE FROM jobs WHERE id = ?", (2,))
 
+    @patch('jobs.release_idle_model')
+    @patch('jobs.sqlite3.connect')
+    @patch('jobs.time.sleep')
+    def test_process_jobs_worker_releases_idle_model_when_queue_is_empty(self, mock_sleep, mock_connect, mock_release_idle_model):
+        """Test the idle wake-up gives the cached model a chance to be released"""
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_cursor.fetchone.return_value = None
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+        mock_sleep.side_effect = [KeyboardInterrupt()]
+
+        try:
+            process_jobs("test.db", "http://localhost:3000/")
+        except KeyboardInterrupt:
+            pass
+
+        mock_release_idle_model.assert_called_once_with()
+
     @patch('jobs.sqlite3.connect')
     @patch('jobs.time.sleep')
     def test_process_jobs_worker_handles_empty_queue(self, mock_sleep, mock_connect):

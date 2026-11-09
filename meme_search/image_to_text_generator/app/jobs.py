@@ -2,7 +2,7 @@ import time
 import sqlite3
 import threading
 from log_config import logging
-from image_to_text_generator import image_to_text
+from image_to_text_generator import image_to_text, release_idle_model
 from senders import description_sender, status_sender, failure_sender
 from errors import PermanentError, TransientError, MAX_RETRY_ATTEMPTS, RETRY_DELAYS
 
@@ -141,6 +141,7 @@ def process_jobs(JOB_DB, APP_URL):
                 else:
                     # If there are no jobs, wait for a while before checking again
                     logging.info("No jobs in queue. Waiting...")
+                    release_idle_model()
 
                 # Always close connection before sleep/continue
                 if conn:

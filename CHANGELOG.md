@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+Local description generation:
+
+- Fixed the image-to-text service reloading model weights from disk for every
+  image. The selected model is now loaded once and reused across jobs; a model
+  switch in Settings releases the old model before loading the new one.
+- Added `MODEL_IDLE_TIMEOUT` (seconds, default `300`, `0` keeps the model
+  loaded) to release the model's RAM or GPU memory after the queue has been
+  idle that long.
+
+This change does not touch the database schema, the job queue, or the Search
+API contract.
+
 ## [2.3.2] - 2026-08-04
 
 Dependency and CI maintenance:

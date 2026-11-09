@@ -8,8 +8,26 @@ from pathlib import Path
 # Add app directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "app"))
 
-from image_to_text_generator import download_model, image_to_text, validate_image
+import weakref
+import image_to_text_generator
+from image_to_text_generator import (
+    download_model,
+    image_to_text,
+    validate_image,
+    release_model,
+    release_idle_model,
+    parse_idle_timeout,
+)
+from model_init import TestImageToText as DummyModel
 from errors import PermanentError, TransientError, MAX_IMAGE_SIZE_BYTES
+
+
+@pytest.fixture(autouse=True)
+def reset_model_cache():
+    # The loaded model is cached at module level, so every test starts and ends without one.
+    release_model()
+    yield
+    release_model()
 
 
 class TestDownloadModel:
@@ -322,3 +340,114 @@ class TestValidateImage:
         """Test image_to_text raises PermanentError when file doesn't exist"""
         with pytest.raises(PermanentError, match="Image file not found"):
             image_to_text("/nonexistent/image.jpg", "test")
+
+
+class TestModelCache:
+    """The loaded model is reused across jobs instead of being reloaded per image"""
+
+    @patch('image_to_text_generator.validate_image')
+    @patch('image_to_text_generator.time.sleep')
+    @patch('image_to_text_generator.model_selector')
+    def test_same_model_is_constructed_once(self, mock_model_selector, mock_sleep, mock_validate):
+        mock_model_selector.side_effect = lambda name: DummyModel()
+
+        first = image_to_text("/memes/a.jpg", "test")
+        second = image_to_text("/memes/b.jpg", "test")
+
+        assert first == "Test description for a"
+        assert second == "Test description for b"
+        mock_model_selector.assert_called_once_with("test")
+
+    @patch('image_to_text_generator.validate_image')
+    @patch('image_to_text_generator.time.sleep')
+    @patch('image_to_text_generator.model_selector')
+    def test_switching_model_releases_previous_before_loading(self, mock_model_selector, mock_sleep, mock_validate):
+        refs = []
+        alive_at_construction = []
+
+        def build(name):
+            alive_at_construction.append([ref() is not None for ref in refs])
+            model = DummyModel()
+            refs.append(weakref.ref(model))
+            return model
+
+        mock_model_selector.side_effect = build
+
+        image_to_text("/memes/a.jpg", "test")
+        image_to_text("/memes/b.jpg", "Florence-2-base")
+
+        assert [c.args[0] for c in mock_model_selector.call_args_list] == ["test", "Florence-2-base"]
+        # The first model must already be gone when the second one is built, so two never coexist.
+        assert alive_at_construction == [[], [False]]
+        assert refs[1]() is not None
+
+    @patch('image_to_text_generator.validate_image')
+    @patch('image_to_text_generator.time.sleep')
+    @patch('image_to_text_generator.model_selector')
+    def test_release_empties_cuda_cache_when_available(self, mock_model_selector, mock_sleep, mock_validate):
+        mock_model_selector.side_effect = lambda name: DummyModel()
+        image_to_text("/memes/a.jpg", "test")
+
+        with patch('image_to_text_generator.torch.cuda.is_available', return_value=True), \
+                patch('image_to_text_generator.torch.cuda.empty_cache') as mock_empty_cache:
+            release_model()
+
+        mock_empty_cache.assert_called_once()
+
+    @patch('image_to_text_generator.validate_image')
+    @patch('image_to_text_generator.time.sleep')
+    @patch('image_to_text_generator.model_selector')
+    def test_failed_load_is_not_cached(self, mock_model_selector, mock_sleep, mock_validate):
+        mock_model_selector.side_effect = [Exception("hub down"), DummyModel()]
+
+        with pytest.raises(TransientError, match="Model download failed"):
+            image_to_text("/memes/a.jpg", "test")
+        assert image_to_text("/memes/a.jpg", "test") == "Test description for a"
+        assert mock_model_selector.call_count == 2
+
+
+class TestIdleRelease:
+    """MODEL_IDLE_TIMEOUT releases a model nobody has used for a while"""
+
+    def load_dummy(self):
+        with patch('image_to_text_generator.validate_image'), \
+                patch('image_to_text_generator.time.sleep'), \
+                patch('image_to_text_generator.model_selector', side_effect=lambda name: DummyModel()) as mock_model_selector:
+            image_to_text("/memes/a.jpg", "test")
+        return mock_model_selector
+
+    def test_idle_timeout_releases_cached_model(self, monkeypatch):
+        monkeypatch.setattr(image_to_text_generator, "MODEL_IDLE_TIMEOUT", 300)
+        self.load_dummy()
+        now = image_to_text_generator.time.monotonic()
+
+        assert release_idle_model(now=now + 299) is False
+        assert release_idle_model(now=now + 301) is True
+        # Released, so the next job has to load it again.
+        assert self.load_dummy().call_count == 1
+
+    def test_zero_timeout_never_releases(self, monkeypatch):
+        monkeypatch.setattr(image_to_text_generator, "MODEL_IDLE_TIMEOUT", 0)
+        self.load_dummy()
+        now = image_to_text_generator.time.monotonic()
+
+        assert release_idle_model(now=now + 10 ** 9) is False
+        with patch('image_to_text_generator.model_selector') as mock_model_selector:
+            with patch('image_to_text_generator.validate_image'), patch('image_to_text_generator.time.sleep'):
+                image_to_text("/memes/b.jpg", "test")
+        mock_model_selector.assert_not_called()
+
+    def test_nothing_to_release_without_a_model(self, monkeypatch):
+        monkeypatch.setattr(image_to_text_generator, "MODEL_IDLE_TIMEOUT", 1)
+        assert release_idle_model(now=image_to_text_generator.time.monotonic() + 10) is False
+
+    @pytest.mark.parametrize("raw, expected", [
+        (None, 300),
+        ("", 300),
+        ("60", 60),
+        ("0", 0),
+        ("-5", 0),
+        ("soon", 300),
+    ])
+    def test_parse_idle_timeout(self, raw, expected):
+        assert parse_idle_timeout(raw) == expected

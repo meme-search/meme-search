@@ -58,6 +58,7 @@ services:
     environment:
       APP_PORT: "${APP_PORT:-3000}"
       GEN_URL: "http://meme_search:3000"
+      MODEL_IDLE_TIMEOUT: "${MODEL_IDLE_TIMEOUT:-300}"
     depends_on:
       meme_search_uploads_setup:
         condition: service_completed_successfully
