@@ -349,6 +349,24 @@ the app directly to a public network.
 
 The image-to-text models used to auto generate descriptions for your memes are all open source, and vary in size.
 
+### Multilingual search
+
+Vector search uses the English `sentence-transformers/all-MiniLM-L6-v2` embedding model by default. For memes or queries in other languages, set a multilingual model in `.env`:
+
+```sh
+EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+```
+
+The model must produce 384-dimensional vectors, as both of these do. A non-default model is downloaded on first boot of the `meme_search` and `meme_search_jobs` containers, so that start needs network access and takes longer.
+
+Vectors from different models cannot be compared, so after changing `EMBEDDING_MODEL` rebuild all stored embeddings once:
+
+```sh
+docker compose exec meme_search bin/rails embeddings:rebuild
+```
+
+Run the same command once after upgrading if your descriptions contain non-Latin text: earlier versions dropped those words before embedding.
+
 ### Custom bind address and app port
 
 Easily customize the app's port to more easily use the it with tools like [Unraid](https://unraid.net/?srsltid=AfmBOorvWvSZbCHKnqdR__AcllotnsLR6did_FhAaNfUowqqU2IprD1v) or [Portainer](https://www.portainer.io/), or because you already have services running on the default `meme_search` app port `3000`.

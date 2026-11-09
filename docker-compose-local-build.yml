@@ -19,6 +19,7 @@ services:
       OPENAI_API_BASE_URL: "${OPENAI_API_BASE_URL:-}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       OPENAI_VISION_MODEL: "${OPENAI_VISION_MODEL:-}"
+      EMBEDDING_MODEL: "${EMBEDDING_MODEL:-}"
       MEME_SEARCH_ALLOWED_HOSTS: "${MEME_SEARCH_ALLOWED_HOSTS:-}"
     ports:
       - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3000}:3000" # Non-loopback binding is advanced and unsupported.
@@ -44,6 +45,7 @@ services:
       OPENAI_API_BASE_URL: "${OPENAI_API_BASE_URL:-}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
       OPENAI_VISION_MODEL: "${OPENAI_VISION_MODEL:-}"
+      EMBEDDING_MODEL: "${EMBEDDING_MODEL:-}"
     depends_on:
       meme_search_uploads_setup:
         condition: service_completed_successfully

@@ -200,8 +200,8 @@ class ImageCore < ApplicationRecord
   private
 
     def clean_word(text)
-      # clean input text - keeping only lower case letters, numbers, punctuation, and single quote symbols
-      cleaned_text = text.downcase.strip.gsub(/[^a-z0-9,.!?']/, " ")
+      # clean input text - keeping only lower case letters and numbers of any script, punctuation, and single quote symbols
+      cleaned_text = text.downcase.strip.gsub(/[^\p{L}\p{N},.!?']/, " ")
       cleaned_text.gsub!(/\s+/, " ")
       cleaned_text
     end

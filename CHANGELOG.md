@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+Multilingual vector search:
+
+- Added the `EMBEDDING_MODEL` setting for the Rails web and jobs containers.
+  The default stays `sentence-transformers/all-MiniLM-L6-v2`, so existing
+  vectors remain valid; `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
+  is the documented multilingual option with the same 384 dimensions.
+- Fixed description snippets losing every non-Latin letter before embedding.
+  Cyrillic, CJK, and accented words are now kept, and descriptions without any
+  Latin words no longer fail to save embeddings. ASCII text is cleaned exactly
+  as before.
+- Added `bin/rails embeddings:rebuild` to recompute all description embeddings
+  after changing the model, or once after upgrading for non-Latin descriptions.
+
+This change does not alter the database schema or Search API contract.
+
 ## [2.3.2] - 2026-08-04
 
 Dependency and CI maintenance:
