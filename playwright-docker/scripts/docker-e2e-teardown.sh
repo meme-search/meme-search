@@ -19,6 +19,14 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 LOG_DIR="$SCRIPT_DIR/../logs"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 
+# COMPOSE_PROJECT_NAME comes from here; without it compose looks for the wrong project and stops nothing.
+ENV_FILE="$SCRIPT_DIR/../.env.docker-e2e"
+if [ -f "$ENV_FILE" ]; then
+  set -a
+  source "$ENV_FILE"
+  set +a
+fi
+
 cd "$PROJECT_ROOT"
 
 # Create logs directory if it doesn't exist

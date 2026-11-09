@@ -45,5 +45,4 @@ test-results/
 playwright/.cache/
 dist/
 playwright-docker/logs/
-playwright-docker/fixtures/
 playground-docker/
